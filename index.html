@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Змейка 64x64</title>
+  <style>
+    body {
+      background-color: #111;
+      color: #0f0;
+      text-align: center;
+      font-family: monospace;
+      margin: 0;
+      padding: 0;
+    }
+    canvas {
+      background: #000;
+      display: block;
+      margin: 0 auto;
+      border: 2px solid #00FF00;
+      touch-action: none;
+    }
+    .controls {
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    button, select {
+      background-color: #222;
+      color: #0f0;
+      border: 1px solid #0f0;
+      padding: 10px 15px;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 5px;
+    }
+    .touch-controls {
+      margin-top: 15px;
+      display: grid;
+      grid-template-columns: repeat(3, 60px);
+      grid-template-rows: repeat(3, 60px);
+      gap: 5px;
+      justify-content: center;
+      touch-action: none;
+    }
+    .touch-controls button {
+      width: 60px;
+      height: 60px;
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Змейка 64x64</h1>
+  <p>Очки: <span id="score">0</span></p>
+  <canvas id="game" width="640" height="640"></canvas>
+  <div class="controls">
+    <label for="difficulty">Сложность:</label>
+    <select id="difficulty">
+      <option value="150">Легко</option>
+      <option value="100" selected>Средне</option>
+      <option value="50">Сложно</option>
+    </select>
+    <button onclick="startGame()">Начать сначала</button>
+    <button onclick="togglePause()">Пауза</button>
+    <button onclick="startGame()">Старт</button>
+  </div>
+  <div class="touch-controls">
+    <div></div>
+    <button onclick="setDirection('UP')">⬆️</button>
+    <div></div>
+    <button onclick="setDirection('LEFT')">⬅️</button>
+    <div></div>
+    <button onclick="setDirection('RIGHT')">➡️</button>
+    <div></div>
+    <button onclick="setDirection('DOWN')">⬇️</button>
+    <div></div>
+  </div>
+  <audio id="eat-sound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
+  <audio id="gameover-sound" src="https://www.soundjay.com/button/beep-10.wav"></audio>
+
+  <script>
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    const box = 10;
+    const scoreDisplay = document.getElementById('score');
+    const eatSound = document.getElementById('eat-sound');
+    const gameOverSound = document.getElementById('gameover-sound');
+    const difficultySelect = document.getElementById('difficulty');
+
+    let snake, food, score, d, game, paused = false;
+
+    document.addEventListener("keydown", e => {
+      switch (e.keyCode) {
+        case 37: if (d !== "RIGHT") d = "LEFT"; break;
+        case 38: if (d !== "DOWN") d = "UP"; break;
+        case 39: if (d !== "LEFT") d = "RIGHT"; break;
+        case 40: if (d !== "UP") d = "DOWN"; break;
+        case 32: togglePause(); break;
+      }
+    });
+
+    function setDirection(dir) {
+      if (dir === 'LEFT' && d !== 'RIGHT') d = 'LEFT';
+      else if (dir === 'UP' && d !== 'DOWN') d = 'UP';
+      else if (dir === 'RIGHT' && d !== 'LEFT') d = 'RIGHT';
+      else if (dir === 'DOWN' && d !== 'UP') d = 'DOWN';
+    }
+
+    function togglePause() {
+      paused = !paused;
+    }
+
+    function startGame() {
+      clearInterval(game);
+      score = 0;
+      d = null;
+      paused = false;
+      snake = [{ x: 32 * box, y: 32 * box }];
+      food = randomFood();
+      scoreDisplay.textContent = score;
+      game = setInterval(draw, parseInt(difficultySelect.value));
+    }
+
+    function randomFood() {
+      return {
+        x: Math.floor(Math.random() * 64) * box,
+        y: Math.floor(Math.random() * 64) * box
+      };
+    }
+
+    function draw() {
+      if (paused) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < snake.length; i++) {
+        ctx.fillStyle = i === 0 ? "lime" : "green";
+        ctx.fillRect(snake[i].x, snake[i].y, box, box);
+      }
+
+      ctx.fillStyle = "red";
+      ctx.fillRect(food.x, food.y, box, box);
+
+      let snakeX = snake[0].x;
+      let snakeY = snake[0].y;
+
+      if (d == "LEFT") snakeX -= box;
+      if (d == "UP") snakeY -= box;
+      if (d == "RIGHT") snakeX += box;
+      if (d == "DOWN") snakeY += box;
+
+      if (snakeX == food.x && snakeY == food.y) {
+        score++;
+        scoreDisplay.textContent = score;
+        eatSound.play();
+        food = randomFood();
+      } else {
+        snake.pop();
+      }
+
+      let newHead = { x: snakeX, y: snakeY };
+
+      if (
+        snakeX < 0 || snakeX >= canvas.width ||
+        snakeY < 0 || snakeY >= canvas.height ||
+        collision(newHead, snake)
+      ) {
+        clearInterval(game);
+        gameOverSound.play();
+        alert("Игра окончена! Ваш счёт: " + score);
+      }
+
+      snake.unshift(newHead);
+    }
+
+    function collision(head, array) {
+      return array.some(segment => head.x == segment.x && head.y == segment.y);
+    }
+
+    // window.onload = startGame;
+  </script>
+</body>
+</html>
